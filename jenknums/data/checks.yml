@@ -1,0 +1,122 @@
+checks:
+  - id: anonymous-dashboard
+    title: Jenkins dashboard is accessible anonymously
+    category: access-control
+    severity: high
+    path: ./
+    contexts: [anonymous]
+    parser: dashboard
+  - id: script-console-exposed
+    title: Jenkins Script Console is accessible
+    category: code-execution
+    severity: critical
+    path: script/
+    contexts: [anonymous, authenticated]
+    parser: script_console
+  - id: system-info-exposed
+    title: Jenkins system information is accessible
+    category: information-disclosure
+    severity: high
+    path: systemInfo
+    contexts: [anonymous, authenticated]
+    parser: system_info
+  - id: user-enumeration-asynchpeople
+    title: Jenkins user directory is accessible
+    category: information-disclosure
+    severity: medium
+    path: asynchPeople/api/json
+    contexts: [anonymous, authenticated]
+    parser: json
+  - id: people-directory-exposed
+    title: Jenkins People API is accessible
+    category: information-disclosure
+    severity: medium
+    path: people/api/json
+    contexts: [anonymous, authenticated]
+    parser: json
+  - id: plugin-manager-exposed
+    title: Installed Jenkins plugins can be enumerated
+    category: information-disclosure
+    severity: medium
+    path: pluginManager/api/json?depth=1
+    contexts: [anonymous, authenticated]
+    parser: json
+  - id: credentials-metadata-exposed
+    title: Jenkins credentials metadata is accessible
+    category: information-disclosure
+    severity: high
+    path: credentials/store/system/domain/_/api/json?depth=2
+    contexts: [anonymous, authenticated]
+    parser: json
+  - id: nodes-exposed
+    title: Jenkins node inventory is accessible
+    category: information-disclosure
+    severity: medium
+    path: computer/api/json?depth=2
+    contexts: [anonymous, authenticated]
+    parser: json
+  - id: log-access
+    title: Jenkins system log page is accessible
+    category: information-disclosure
+    severity: high
+    path: log/all
+    contexts: [anonymous, authenticated]
+    parser: html
+  - id: root-view-config-exposed
+    title: Jenkins root view configuration is accessible
+    category: information-disclosure
+    severity: info
+    path: config.xml
+    contexts: [anonymous, authenticated]
+    parser: root_view_config
+  - id: signup-enabled
+    title: Jenkins account signup is enabled
+    category: access-control
+    severity: medium
+    path: signup
+    contexts: [anonymous]
+    parser: signup
+  - id: cli-http-exposed
+    title: Jenkins CLI HTTP endpoint is reachable
+    category: exposed-service
+    severity: info
+    path: cli/
+    contexts: [anonymous, authenticated]
+    parser: cli
+  - id: agent-listener-advertised
+    title: Jenkins inbound agent listener is advertised
+    category: exposed-service
+    severity: info
+    path: tcpSlaveAgentListener/
+    contexts: [anonymous]
+    parser: agent_listener
+  - id: instance-identity-public
+    title: Jenkins instance identity public key is accessible
+    category: exposed-service
+    severity: info
+    path: instance-identity/
+    contexts: [anonymous]
+    parser: instance_identity
+  - id: stack-trace-leak
+    title: Jenkins returns a Java stack trace for malformed adjunct path
+    category: information-disclosure
+    severity: low
+    path: adjuncts/3a890183/
+    contexts: [anonymous]
+    parser: stack_trace
+    verify_only: true
+plugin_endpoints:
+  - id: blue-ocean-api
+    path: blue/rest/organizations/jenkins/pipelines/
+  - id: prometheus
+    path: prometheus/
+  - id: metrics
+    path: metrics/currentUser
+  - id: configuration-as-code-export
+    path: configuration-as-code/export
+  - id: job-config-history
+    path: jobConfigHistory/
+  - id: script-approval
+    path: scriptApproval/
+  - id: audit-api
+    path: audit/api/json

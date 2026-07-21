@@ -1,0 +1,2 @@
+recursive-include jenknums/data *.yml *.json *.json.gz
+include README.md LICENSE
