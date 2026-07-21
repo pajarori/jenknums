@@ -29,10 +29,10 @@ def cprint(*args, **kwargs):
 
 def banner() -> str:
     return rf"""[bold cyan]
-  ▐     ▌
-  ▜▘▛▌▛▌▌▌▛▛▌▛▘
-▙▖▐▖▌▌▙▌▙▌▌▌▌▄▌ [/bold cyan][dim]v{__version__}[/dim]
-[white][dim]pajarori[/dim][/white]
+ ▘    ▌          
+ ▌█▌▛▌▙▘▛▌▌▌▛▛▌▛▘
+ ▌▙▖▌▌▛▖▌▌▙▌▌▌▌▄▌ [/bold cyan][dim]v{__version__}[/dim]
+▙▌ [white][dim]pajarori[/dim][/white]
 """
 
 
