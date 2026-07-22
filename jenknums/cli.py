@@ -290,13 +290,9 @@ class SingleTargetStreamRenderer:
         self.detected = False
         self.scan_line = False
         self.sections = set()
-        self.findings_seen = set()
-        self.vulnerabilities_seen = set()
-        self.findings_shown = 0
-        self.vulnerabilities_shown = 0
-        self.findings_open = False
-        self.vulnerabilities_open = False
-        self.findings_closed = False
+        self.pending_findings = {}
+        self.pending_vulnerabilities = {}
+        self.findings_rendered = False
 
     def handle(self, event: Dict[str, Any]) -> None:
         event_type = event.get("event")
@@ -314,11 +310,11 @@ class SingleTargetStreamRenderer:
             return
 
         if event_type == "findings":
-            self._render_findings(event)
+            self._collect_findings(event)
             return
 
         if event_type == "quick_complete":
-            self._close_findings()
+            self._render_findings()
 
     def _render_inventory(self, event: Dict[str, Any]) -> None:
         inventory = event.get("inventory") or {}
@@ -428,81 +424,72 @@ class SingleTargetStreamRenderer:
                 color="yellow",
             )
 
-    def _render_findings(self, event: Dict[str, Any]) -> None:
-        vulnerabilities = sorted(
-            event.get("vulnerabilities", []),
+    def _collect_findings(self, event: Dict[str, Any]) -> None:
+        for item in event.get("vulnerabilities", []):
+            marker = item.get("id")
+            if marker:
+                self.pending_vulnerabilities[marker] = item
+        for item in event.get("findings", []):
+            if item.get("category") == "vulnerability":
+                continue
+            marker = (item.get("id"), item.get("url"), item.get("auth_context"))
+            self.pending_findings[marker] = item
+
+    def _render_findings(self) -> None:
+        if self.findings_rendered:
+            return
+        self.findings_rendered = True
+        findings = sorted(
+            self.pending_findings.values(),
             key=lambda item: -SEVERITY_ORDER.get(
                 str(item.get("severity", "unknown")).lower(), -1
             ),
         )
-        for item in vulnerabilities:
-            marker = item.get("id")
-            if marker in self.vulnerabilities_seen:
-                continue
-            self.vulnerabilities_seen.add(marker)
-            if not self.vulnerabilities_open:
-                self.vulnerabilities_open = True
-                cprint("\n[bold red][!][/] [bold]vulnerabilities[/]")
-            if self.vulnerabilities_shown < self.display_limit:
-                self.vulnerabilities_shown += 1
-                cprint(
-                    f"    {severity_tag(item.get('severity', 'unknown'))} "
+        if findings:
+            _render_items(
+                "findings",
+                findings,
+                self.display_limit,
+                lambda item: (
+                    f"{severity_tag(item.get('severity', 'unknown'))} "
+                    f"[bold]{escape(_text(item.get('id')))}[/] "
+                    f"{escape(_text(item.get('title')).lower())}"
+                ),
+                marker="!",
+                color="yellow",
+            )
+        vulnerabilities = sorted(
+            self.pending_vulnerabilities.values(),
+            key=lambda item: -SEVERITY_ORDER.get(
+                str(item.get("severity", "unknown")).lower(), -1
+            ),
+        )
+        if vulnerabilities:
+            _render_items(
+                "vulnerabilities",
+                vulnerabilities,
+                self.display_limit,
+                lambda item: (
+                    f"{severity_tag(item.get('severity', 'unknown'))} "
                     f"[bold]{escape(_text(item.get('id')))}[/] "
                     f"{escape(_text(item.get('product')).lower())} "
                     f"v{escape(_text(item.get('installed_version')))}"
-                )
-        findings = sorted(
-            (
-                item
-                for item in event.get("findings", [])
-                if item.get("category") != "vulnerability"
-            ),
-            key=lambda item: -SEVERITY_ORDER.get(
-                str(item.get("severity", "unknown")).lower(), -1
-            ),
-        )
-        for item in findings:
-            marker = (item.get("id"), item.get("url"), item.get("auth_context"))
-            if marker in self.findings_seen:
-                continue
-            self.findings_seen.add(marker)
-            if not self.findings_open:
-                self.findings_open = True
-                cprint("\n[bold yellow][!][/] [bold]findings[/]")
-            if self.findings_shown < self.display_limit:
-                self.findings_shown += 1
-                cprint(
-                    f"    {severity_tag(item.get('severity', 'unknown'))} "
-                    f"[bold]{escape(_text(item.get('id')))}[/] "
-                    f"{escape(_text(item.get('title')).lower())}"
-                )
-
-    def _close_findings(self) -> None:
-        if self.findings_closed:
-            return
-        self.findings_closed = True
-        if len(self.vulnerabilities_seen) > self.vulnerabilities_shown:
-            cprint(
-                f"    [dim]... +{len(self.vulnerabilities_seen) - self.vulnerabilities_shown} "
-                "more in raw output[/]"
-            )
-        if len(self.findings_seen) > self.findings_shown:
-            cprint(
-                f"    [dim]... +{len(self.findings_seen) - self.findings_shown} "
-                "more in raw output[/]"
+                ),
+                marker="!",
+                color="red",
             )
 
     def finish(self, result: Dict[str, Any]) -> None:
         if not self.detected:
             render_result(result, detailed=True, display_limit=self.display_limit)
             return
-        self._render_findings(
+        self._collect_findings(
             {
                 "findings": result.get("findings", []),
                 "vulnerabilities": result.get("vulnerabilities", []),
             }
         )
-        self._close_findings()
+        self._render_findings()
         coverage = result.get("coverage", {})
         cprint(
             f"\n[dim]\\[i] raw: [cyan]{escape(_text(result.get('collection_dir')))}[/] "
